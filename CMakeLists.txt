@@ -32,15 +32,28 @@ target_include_directories(
         PUBLIC ${IMGUI_SOURCE_DIR}
         PUBLIC ${IMGUI_SOURCE_DIR}/backends
 )
-target_link_libraries(imgui PRIVATE glfw Vulkan::Vulkan)
+target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
+
+## ImPlot
+set(IMPLOT_SOURCE_DIR libs/implot)
+add_library(implot STATIC EXCLUDE_FROM_ALL)
+target_sources(
+        implot
+        PRIVATE
+        ${IMPLOT_SOURCE_DIR}/implot.cpp
+        ${IMPLOT_SOURCE_DIR}/implot_demo.cpp
+        ${IMPLOT_SOURCE_DIR}/implot_items.cpp
+)
+target_include_directories(implot PUBLIC ${IMPLOT_SOURCE_DIR})
+target_link_libraries(implot PRIVATE imgui)
 
 ## VulkanImGui (this library)
 add_library(VulkanImGui STATIC ImGuiApp.cpp)
-target_link_libraries(VulkanImGui PUBLIC imgui glfw Vulkan::Vulkan)
+target_link_libraries(VulkanImGui PUBLIC imgui implot PRIVATE glfw Vulkan::Vulkan)
 
 ### Executable example
 add_executable(
         VulkanImGuiExample
         main.cpp
 )
-target_link_libraries(VulkanImGuiExample PRIVATE VulkanImGui imgui Vulkan::Vulkan glfw)
+target_link_libraries(VulkanImGuiExample PRIVATE VulkanImGui)

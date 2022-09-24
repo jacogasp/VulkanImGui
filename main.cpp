@@ -7,33 +7,45 @@
 #include <cmath>
 
 template <size_t size>
-using plot_data = std::array<float, size>;
+using plot_array = std::array<float, size>;
+
+template<size_t Size>
+struct PlotData {
+  plot_array<Size> x;
+  plot_array<Size> y;
+  size_t size = Size;
+};
 
 template <size_t size>
-constexpr plot_data<size> makeBarPlotData() {
-  plot_data<size> a;
+constexpr plot_array<size> makeBarPlotData() {
+  plot_array<size> a;
   for (size_t i = 0; i < size; i++)
     a.at(i) = float(i) * 10.0f;
   return a;
 }
 
 template <size_t size>
-plot_data<size> makeLinePlotData() {
-  plot_data<size> a;
-  for (size_t i = 0; i < size; ++i)
-    a.at(i) = std::sin((float)i);
-  return a;
+PlotData<size> makeLinePlotData(float a, float b) {
+  plot_array<size> x;
+  plot_array<size> y;
+  for (size_t i = 0; i < size; ++i) {
+    auto t = float(i) / size * (b - a);
+    x.at(i) = t;
+    y.at(i) = std::sin(t / M_PI_2) * 100.0f;
+  }
+  return {x, y};
 }
 
 class MyApp {
 private:
-  constexpr static plot_data<10> m_barPlotData{makeBarPlotData<10>()};
-  plot_data<100> m_linePlotData;
+  constexpr static size_t n_points = 1000;
+  constexpr static plot_array<10> m_barPlotData{makeBarPlotData<10>()};
+  PlotData<n_points> m_linePlotData;
 
 public:
-  MyApp() : m_linePlotData{makeLinePlotData<100>()} {}
+  MyApp() : m_linePlotData{makeLinePlotData<n_points>(0.0f, 10.0f)} {}
 
-  static void Update() {
+  void Update() {
     static float f     = 0.0f;
     static int counter = 0;
 
@@ -49,7 +61,8 @@ public:
         ImGui::GetIO().Framerate
     );
     ImPlot::BeginPlot("A plot");
-    ImPlot::PlotBars("Bar plot", m_barPlotData.data(), m_barPlotData.size());
+    ImPlot::PlotBars("Bar Plot", m_barPlotData.data(), m_barPlotData.size());
+    ImPlot::PlotLine("Line Plot", m_linePlotData.x.data(), m_linePlotData.y.data(),  m_linePlotData.size);
     ImPlot::EndPlot();
     ImGui::End();
   }

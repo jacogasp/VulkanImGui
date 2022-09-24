@@ -36,7 +36,7 @@ target_link_libraries(imgui PRIVATE glfw Vulkan::Vulkan)
 
 ## VulkanImGui (this library)
 add_library(VulkanImGui STATIC ImGuiApp.cpp)
-target_link_libraries(VulkanImGui PRIVATE imgui glfw Vulkan::Vulkan)
+target_link_libraries(VulkanImGui PUBLIC imgui glfw Vulkan::Vulkan)
 
 ### Executable example
 add_executable(

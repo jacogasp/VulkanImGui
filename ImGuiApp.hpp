@@ -5,7 +5,10 @@
 #ifndef VulkanImGui_IMGUIAPP_HPP
 #define VulkanImGui_IMGUIAPP_HPP
 
+#include <chrono>
+#include <cstdio>
 #include <iostream>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -334,11 +337,15 @@ static void glfw_error_callback(int error, const char *description) {
   std::cerr << "Glwf Error " << error << ": " << description << std::endl;
 }
 
+static std::chrono::system_clock::time_point frameStartTime = std::chrono::system_clock::now();
+static std::chrono::system_clock::time_point frameEndTime   = std::chrono::system_clock::now();
+
 struct AppSettings {
   int width         = 1280;
   int height        = 720;
   std::string title = "Dear ImGui GLFW+Vulkan example";
-  bool showDemo = false;
+  bool showDemo     = false;
+  float frameRate   = 30.0f;
 };
 
 template <typename Derived>
@@ -350,13 +357,39 @@ class App : public Derived {
   bool show_demo_window        = true;
   bool show_another_window     = false;
   ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+  float m_frameDuration        = 33.33333f;
 
 public:
-  explicit App(AppSettings appSettings = AppSettings{}) : m_settings{std::move(appSettings)} { Init(); }
+  explicit App(AppSettings appSettings = AppSettings{})
+      : m_settings{std::move(appSettings)},
+        m_frameDuration(1000.0f / appSettings.frameRate) {
+    Init();
+  }
   ~App() { Cleanup(); }
   void Update() { static_cast<Derived *>(this)->Update(); };
   void Run() {
     while (!glfwWindowShouldClose(window)) {
+
+      // Maintain designated frequency of 5 Hz (200 ms per frame)
+      using namespace std::chrono;
+      frameStartTime                         = system_clock::now();
+      duration<double, std::milli> work_time = frameStartTime - frameEndTime;
+
+      if (work_time.count() < m_frameDuration) {
+        duration<double, std::milli> delta_ms(m_frameDuration - work_time.count());
+        auto delta_ms_duration = duration_cast<std::chrono::milliseconds>(delta_ms);
+        std::this_thread::sleep_for(milliseconds(delta_ms_duration.count()));
+      }
+      frameEndTime                                         = system_clock::now();
+      std::chrono::duration<double, std::milli> sleep_time = system_clock::now() - frameStartTime;
+
+      auto total = (work_time + sleep_time).count();
+      auto fps =  1000. / total;
+      std::cout << "FPS: " << fps
+                << ", work: " << work_time.count()
+                << " ms, sleep: "  << sleep_time.count()
+                << " ms, total: " << total << " ms." << std::endl;
+
       // Poll and handle events (inputs, window resize, etc.)
       // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your
       // inputs.

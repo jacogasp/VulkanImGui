@@ -358,6 +358,7 @@ class App : public Derived {
   bool show_another_window     = false;
   ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
   float m_frameDuration        = 33.33333f;
+  double m_lastFrameTime;
 
 public:
   explicit App(AppSettings appSettings = AppSettings{})
@@ -369,27 +370,7 @@ public:
   void Update() { static_cast<Derived *>(this)->Update(); };
   void Run() {
     while (!glfwWindowShouldClose(window)) {
-
-      // Maintain designated frequency of 5 Hz (200 ms per frame)
-      using namespace std::chrono;
-      frameStartTime                         = system_clock::now();
-      duration<double, std::milli> work_time = frameStartTime - frameEndTime;
-
-      if (work_time.count() < m_frameDuration) {
-        duration<double, std::milli> delta_ms(m_frameDuration - work_time.count());
-        auto delta_ms_duration = duration_cast<std::chrono::milliseconds>(delta_ms);
-        std::this_thread::sleep_for(milliseconds(delta_ms_duration.count()));
-      }
-      frameEndTime                                         = system_clock::now();
-      std::chrono::duration<double, std::milli> sleep_time = system_clock::now() - frameStartTime;
-
-      auto total = (work_time + sleep_time).count();
-      auto fps =  1000. / total;
-      std::cout << "FPS: " << fps
-                << ", work: " << work_time.count()
-                << " ms, sleep: "  << sleep_time.count()
-                << " ms, total: " << total << " ms." << std::endl;
-
+      m_lastFrameTime = glfwGetTime();
       // Poll and handle events (inputs, window resize, etc.)
       // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your
       // inputs.
@@ -398,7 +379,11 @@ public:
       // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or
       // clear/overwrite your copy of the keyboard data. Generally you may always pass all inputs to dear imgui, and
       // hide them from your application based on those two flags.
-      glfwPollEvents();
+      if (!glfwGetWindowAttrib(window, GLFW_VISIBLE) || glfwGetWindowAttrib(window, GLFW_ICONIFIED))
+        glfwWaitEvents();
+      else
+        // Render at 5 FPS when no new events are received
+        glfwWaitEventsTimeout(m_lastFrameTime - glfwGetTime() + 1 / 1.0);
 
       // Resize swap chain?
       if (g_SwapChainRebuild) {
